@@ -6,10 +6,22 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cors:s3": "node configure-cors.cjs",
+    "cors:b2": "node configure-b2-cors.cjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1014.0",
+    "@aws-sdk/s3-request-presigner": "^3.1014.0",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
+    "backblaze-b2": "^1.7.1",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.3.1",
+    "lucide-react": "^0.577.0",
+    "nanoid": "^5.1.7",
     "next": "16.2.1",
+    "pg": "^8.20.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -20,6 +32,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "prisma": "^7.5.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

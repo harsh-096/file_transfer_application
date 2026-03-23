@@ -1,0 +1,28 @@
+datasource db {
+    provider = "postgresql"
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model Transfer {
+    id        String   @id @default(uuid())
+    title     String?
+    message   String?
+    shortCode String   @unique
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+    files     File[]
+}
+
+model File {
+    id         String   @id @default(uuid())
+    transferId String
+    transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+    path       String
+    name       String
+    key        String
+    size       Int
+    type       String
+}
