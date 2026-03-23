@@ -39,7 +39,7 @@ export default async function DownloadPage({ params }: { params: Promise<{ short
   const bucketName = process.env.STORAGE_BUCKET_NAME!;
 
   const filesWithUrls = await Promise.all(
-    transfer.files.map(async (f) => {
+    transfer.files.map(async (f: { id: string; path: string; name: string; key: string; size: number; type: string }) => {
       const getCmd = new GetObjectCommand({
         Bucket: bucketName,
         Key: f.key,
