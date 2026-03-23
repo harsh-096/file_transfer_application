@@ -30,7 +30,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ shortCod
 
     // Generate presigned URLs for each file for download and preview
     const filesWithUrls = await Promise.all(
-      transfer.files.map(async (file) => {
+      transfer.files.map(async (file: { key: string; name: string } & Record<string, unknown>) => {
         const downloadCommand = new GetObjectCommand({
           Bucket: bucketName,
           Key: file.key,
