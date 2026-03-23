@@ -48,7 +48,19 @@ export async function POST(request: NextRequest) {
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
 
     const transfer = await prisma.transfer.create({
-      data: { fileName, fileKey, fileSize, shortCode, expiresAt },
+      data: {
+        shortCode,
+        expiresAt,
+        files: {
+          create: {
+            path: fileName,
+            name: fileName,
+            key: fileKey,
+            size: fileSize,
+            type: fileType || 'application/octet-stream',
+          },
+        },
+      },
     });
 
     const origin = request.nextUrl.origin;
