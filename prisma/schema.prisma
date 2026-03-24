@@ -7,11 +7,26 @@ generator client {
 }
 
 model Transfer {
-  id        String   @id @default(uuid())
-  fileName  String
-  fileKey   String // The actual path/name in Backblaze B2
-  fileSize  Int
-  shortCode String   @unique // The shortened URL identifier
+  id        String         @id @default(uuid())
+  title     String?
+  message   String?
+  shortCode String         @unique // The shortened URL identifier
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime       @default(now())
+  files     TransferFile[]
+}
+
+model TransferFile {
+  id         String   @id @default(uuid())
+  transferId String
+  path       String
+  name       String
+  key        String
+  size       Int
+  type       String
+  createdAt  DateTime @default(now())
+
+  transfer Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  @@index([transferId])
 }

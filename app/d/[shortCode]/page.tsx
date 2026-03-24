@@ -6,6 +6,20 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Download, File as FileIcon, HardDrive, Clock, Image as ImageIcon, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
+type TransferFile = {
+  id: string;
+  path: string;
+  name: string;
+  key: string;
+  size: number;
+  type: string;
+};
+
+type TransferFileWithUrls = TransferFile & {
+  downloadUrl: string;
+  previewUrl: string;
+};
+
 function formatSize(bytes: number) {
   if (bytes === 0) return '0 B';
   const k = 1024;
@@ -38,8 +52,8 @@ export default async function DownloadPage({ params }: { params: Promise<{ short
   const s3Client = getS3Client();
   const bucketName = process.env.STORAGE_BUCKET_NAME!;
 
-  const filesWithUrls = await Promise.all(
-    transfer.files.map(async (f: { id: string; path: string; name: string; key: string; size: number; type: string }) => {
+  const filesWithUrls: TransferFileWithUrls[] = await Promise.all(
+    transfer.files.map(async (f: TransferFile) => {
       const getCmd = new GetObjectCommand({
         Bucket: bucketName,
         Key: f.key,
@@ -58,7 +72,7 @@ export default async function DownloadPage({ params }: { params: Promise<{ short
     })
   );
 
-  const totalSize = filesWithUrls.reduce((acc, f) => acc + f.size, 0);
+  const totalSize = filesWithUrls.reduce((acc: number, f: TransferFileWithUrls) => acc + f.size, 0);
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 py-12 bg-linear-to-br from-indigo-100 via-purple-100 to-pink-100 animate-gradient-bg">
@@ -99,7 +113,7 @@ export default async function DownloadPage({ params }: { params: Promise<{ short
           </div>
 
           <div className="flex-1 overflow-y-auto max-h-125 pr-2 flex flex-col gap-3">
-            {filesWithUrls.map((f) => {
+            {filesWithUrls.map((f: TransferFileWithUrls) => {
               const isImage = f.type?.startsWith('image/');
               const isVideo = f.type?.startsWith('video/');
               const isAudio = f.type?.startsWith('audio/');
