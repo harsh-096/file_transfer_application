@@ -1,52 +1,58 @@
-const { S3Client, PutBucketCorsCommand } = require('@aws-sdk/client-s3');
 const dotenv = require('dotenv');
 const path = require('path');
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-async function configureCors() {
-  const endpoint = process.env.STORAGE_ENDPOINT;
-  const accessKeyId = process.env.STORAGE_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.STORAGE_SECRET_ACCESS_KEY;
-  const region = process.env.STORAGE_REGION ?? 'auto';
-  const bucket = process.env.STORAGE_BUCKET_NAME;
-  const allowedOrigins = (process.env.STORAGE_ALLOWED_ORIGINS ?? 'http://localhost:3000,http://127.0.0.1:3000')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+async function configureCorsNative() {
+  const applicationKeyId = process.env.STORAGE_ACCESS_KEY_ID;
+  const applicationKey = process.env.STORAGE_SECRET_ACCESS_KEY;
+  const bucketName = process.env.STORAGE_BUCKET_NAME;
 
-  if (!endpoint || !accessKeyId || !secretAccessKey || !bucket) {
-    throw new Error('Missing storage config');
-  }
-
-  const client = new S3Client({
-    endpoint,
-    region,
-    credentials: { accessKeyId, secretAccessKey },
-    forcePathStyle: true,
-  });
-
-  const command = new PutBucketCorsCommand({
-    Bucket: bucket,
-    CORSConfiguration: {
-      CORSRules: [
-        {
-          AllowedHeaders: ['*', 'content-type', 'x-amz-*'],
-          AllowedMethods: ['GET', 'PUT', 'POST', 'HEAD', 'DELETE'],
-          AllowedOrigins: allowedOrigins,
-          ExposeHeaders: ['ETag', 'x-amz-request-id', 'x-amz-id-2'],
-          MaxAgeSeconds: 86400
-        }
-      ]
+  console.log('Authenticating with B2 Native API...');
+  const authResponse = await fetch('https://api.backblazeb2.com/b2api/v3/b2_authorize_account', {
+    headers: {
+      Authorization: 'Basic ' + Buffer.from(`${applicationKeyId}:${applicationKey}`).toString('base64')
     }
   });
+  if (!authResponse.ok) throw new Error('Auth failed: ' + await authResponse.text());
+  const authData = await authResponse.json();
+  console.log('apiInfo keys:', Object.keys(authData.apiInfo));
+  console.log('apiInfo:', JSON.stringify(authData.apiInfo, null, 2));
+  const apiUrl = authData.apiInfo?.storageApi?.apiUrl || authData.apiUrl;
+  const authorizationToken = authData.authorizationToken;
+  const accountId = authData.accountId;
+  const bucketId = authData.apiInfo?.storageApi?.bucketId;
 
-  try {
-    await client.send(command);
-    console.log('CORS configured successfully on bucket:', bucket);
-  } catch (error) {
-    console.error('Failed to configure CORS:', error);
-  }
+  if (!bucketId) throw new Error('Could not find bucketId in auth response');
+
+  console.log('Updating CORS rules for bucket:', bucketId);
+  const corsRules = [
+    {
+      corsRuleName: "allow-all",
+      allowedOrigins: ["*"],
+      allowedHeaders: ["*"],
+      allowedOperations: ["s3_put", "s3_post", "s3_get", "s3_head", "b2_upload_file"],
+      exposeHeaders: ["ETag"],
+      maxAgeSeconds: 86400
+    }
+  ];
+
+  const updateResponse = await fetch(`${apiUrl}/b2api/v3/b2_update_bucket`, {
+    method: 'POST',
+    headers: {
+      Authorization: authorizationToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      accountId: accountId,
+      bucketId: bucketId,
+      corsRules: corsRules,
+      bucketType: "allPrivate"
+    })
+  });
+
+  if (!updateResponse.ok) throw new Error('Update failed: ' + await updateResponse.text());
+  console.log('Successfully updated CORS using B2 Native API!');
 }
 
-configureCors();
+configureCorsNative().catch(console.error);
